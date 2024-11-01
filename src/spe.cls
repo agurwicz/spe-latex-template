@@ -11,6 +11,37 @@
 \renewcommand{\familydefault}{\sfdefault}
 
 % Additional
+
+% Conference and journal options
+\newif\if@isconference \@isconferencefalse \DeclareOption{conference}{\@isconferencetrue}
+\newif\if@isjournal \@isjournalfalse \DeclareOption{journal}{\@isjournaltrue}
+\ProcessOptions\relax
+
+\if@isjournal \if@isconference
+    \PackageError{spe}{Cannot load both "journal" and "conference" options}
+\fi \fi
+\unless\if@isjournal \unless\if@isconference
+    \PackageError{spe}{One of the "journal" or "conference" options needs to be loaded}
+\fi \fi
+
+\newcommand{\specheckargument}[1]{%
+    \ifx#1\undefined%
+        \PackageError{spe}{Need to define command "\string#1"} %
+    \fi%
+}
+\newcommand{\specheckarguments}{%
+    \specheckargument{\spevenuename}%
+    \specheckargument{\spemanuscriptnumber}%
+    \specheckargument{\spetitle}%
+    \specheckargument{\speauthors}%
+    \specheckargument{\speaffiliations}%
+    \specheckargument{\speauthoraffiliations}%
+    \if@isjournal%
+        \specheckargument{\specorrespondingauthor}%
+        \specheckargument{\spekeywords}%
+    \fi%
+}
+
 \RequirePackage[hyperref]{xcolor}
 \definecolor{spelink}{HTML}{172b81}
 
@@ -73,44 +104,69 @@
 }
 
 \newcommand{\spemaketitle}{
+    \specheckarguments
+
     \setsepchar{;}
 
     \parselist{\speauthors}
     \parselist{\speaffiliations}
     \parselist{\speauthoraffiliations}
+    \if@isjournal
+        \parselist{\specorrespondingauthor}
+        \parselist{\spekeywords}
+    \fi
 
     \begin{flushleft}
 
-    \spevenuename \vspace{5mm}
+        \spevenuename \vspace{5mm}
 
-    \spemanuscriptnumber \vspace{5mm}
+        \spemanuscriptnumber \vspace{5mm}
 
-    \begin{center}
-    \huge \spetitle \vspace{5mm}
-    \end{center}
+        \begin{center}
+        \huge \spetitle \vspace{5mm}
+        \end{center}
 
-    \textbf{
-        \foreach \index in {1, ..., \speauthorslen} {%
-            \ifnum \index < \latexmath{\speauthorslen - 1}%
-                \speauthors[\index]%
-                \textsuperscript{\speauthoraffiliations[\index]}, %
-            \else \ifnum \index = \latexmath{\speauthorslen - 1}%
-                \speauthors[\index]%
-                \textsuperscript{\speauthoraffiliations[\index]} and %
-            \else%
-                \speauthors[\index]%
-                \textsuperscript{\speauthoraffiliations[\index]}%
-            \fi%
-            \fi%
+        \textbf{%
+            \foreach \index in {1, ..., \speauthorslen} {%
+                \newcommand{\spetempauthor}{%
+                    \speauthors[\index]%
+                    \textsuperscript{\speauthoraffiliations[\index]}%
+                    \if@isjournal \ifnum \index = \latexmath{\specorrespondingauthor[1]}%
+                        *%
+                    \fi\fi%
+                }%
+                \ifnum \index < \latexmath{\speauthorslen - 1}%
+                    \spetempauthor, %
+                \else \ifnum \index = \latexmath{\speauthorslen - 1}%
+                    \spetempauthor~and %
+                \else%
+                    \spetempauthor%
+                \fi%
+                \fi%
+            }
         }
-    }
 
-    \vspace{5mm}
-    \foreach \index in {1, ..., \speaffiliationslen} {
-        \textsuperscript{\index}%
-        \speaffiliations[\index]%
-        \par%
-    }
+        \vspace{5mm}
+        \foreach \index in {1, ..., \speaffiliationslen} {
+            \textsuperscript{\index}%
+            \speaffiliations[\index]%
+            \par%
+        }
+
+        \if@isjournal
+            \vspace{3mm}
+
+            *Corresponding author; email: \url{\specorrespondingauthor[2]}
+            \vspace{3mm}
+
+            \textbf{Keywords:}
+            \foreach \index in {1, ..., \spekeywordslen} {%
+                \spekeywords[\index]%
+                \ifnum \index < \latexmath{\spekeywordslen}%
+                    ;
+                \fi%
+            }
+        \fi
 
     \end{flushleft}
 }
